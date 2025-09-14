@@ -1,0 +1,37 @@
+<form id="redshift-form" autocomplete="off" style="margin-bottom: 1em;">
+  <label>
+    Observed Wavelength:
+    <input type="number" id="observed" step="any" required>
+  </label>
+  <br><br>
+  <label>
+    Rest Wavelength:
+    <input type="number" id="rest" step="any" required>
+  </label>
+  <br><br>
+  <button type="submit">Calculate Redshift</button>
+</form>
+<div id="redshift-result" style="font-weight:bold;"></div>
+<script>
+function calculateRedshift(observedWavelength, restWavelength) {
+  if (typeof observedWavelength !== 'number' || typeof restWavelength !== 'number') {
+    throw new Error('Inputs must be numerical values.');
+  }
+  if (restWavelength === 0) {
+    throw new Error('Rest wavelength cannot be zero.');
+  }
+  return (observedWavelength - restWavelength) / restWavelength;
+}
+document.getElementById('redshift-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const observed = parseFloat(document.getElementById('observed').value);
+  const rest = parseFloat(document.getElementById('rest').value);
+  const resultDiv = document.getElementById('redshift-result');
+  try {
+    const z = calculateRedshift(observed, rest);
+    resultDiv.textContent = `Redshift (z): ${z.toFixed(4)}`;
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  }
+});
+</script>

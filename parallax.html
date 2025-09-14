@@ -1,0 +1,115 @@
+<div id="parallax-calculator-section" class="w-full max-w-xl mx-auto bg-gray-900 rounded-3xl shadow-2xl overflow-hidden backdrop-filter backdrop-blur-lg bg-opacity-70 border border-gray-700">
+    <!-- Header -->
+    <div class="p-6 sm:p-8 text-center border-b border-gray-700">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
+            Parallax Calculator
+        </h1>
+        <p class="text-sm sm:text-base text-gray-400 mt-2">
+            Calculate astronomical distances using parallax.
+        </p>
+    </div>
+    
+    <!-- Calculator Body -->
+    <div class="p-6 sm:p-8 space-y-6">
+        
+        <!-- Input Fields -->
+        <div class="space-y-4">
+            <div>
+                <label for="parallaxInput" class="block text-sm font-medium text-gray-300 mb-1">Parallax Angle (p) in Arcseconds</label>
+                <input type="number" id="parallaxInput" placeholder="e.g., 0.7687" class="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+            </div>
+            <div>
+                <label for="parsecsInput" class="block text-sm font-medium text-gray-300 mb-1">Distance (d) in Parsecs</label>
+                <input type="number" id="parsecsInput" placeholder="e.g., 1.30" class="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <button id="calculateButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 shadow-md transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+            Calculate Distance
+        </button>
+
+        <!-- Error Message -->
+        <div id="error-message" class="hidden p-4 rounded-lg bg-red-800 text-red-200 text-sm font-medium text-center">
+            Please enter a valid positive number in either field.
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden space-y-4 p-6 bg-gray-800 rounded-2xl border border-gray-700">
+            <div class="text-center space-y-2">
+                <p class="text-xs text-gray-400">Calculated Distance</p>
+                <p id="parsecs-result" class="text-3xl font-bold text-teal-400"></p>
+                <p class="text-sm text-gray-400">Parsecs (pc)</p>
+            </div>
+            <div class="text-center space-y-2">
+                <p class="text-xs text-gray-400">Or approximately</p>
+                <p id="lightyears-result" class="text-3xl font-bold text-emerald-400"></p>
+                <p class="text-sm text-gray-400">Light-Years (ly)</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function initParallaxCalculator() {
+        const parallaxInput = document.getElementById('parallaxInput');
+        const parsecsInput = document.getElementById('parsecsInput');
+        const calculateButton = document.getElementById('calculateButton');
+        const resultsDiv = document.getElementById('results');
+        const parsecsResult = document.getElementById('parsecs-result');
+        const lightyearsResult = document.getElementById('lightyears-result');
+        const errorMessage = document.getElementById('error-message');
+
+        const PARSEC_TO_LIGHTYEAR = 3.262;
+
+        function calculateFromParallax(parallax) {
+            const distanceParsecs = 1 / parallax;
+            const distanceLightYears = distanceParsecs * PARSEC_TO_LIGHTYEAR;
+            return { distanceParsecs, distanceLightYears };
+        }
+
+        function calculateFromParsecs(parsecs) {
+            const parallax = 1 / parsecs;
+            const distanceLightYears = parsecs * PARSEC_TO_LIGHTYEAR;
+            return { parallax, distanceLightYears };
+        }
+
+        function handleCalculation() {
+            const parallaxValue = parseFloat(parallaxInput.value);
+            const parsecsValue = parseFloat(parsecsInput.value);
+
+            resultsDiv.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            if (parallaxValue > 0) {
+                const result = calculateFromParallax(parallaxValue);
+                parsecsResult.textContent = result.distanceParsecs.toFixed(3);
+                lightyearsResult.textContent = result.distanceLightYears.toFixed(3);
+                resultsDiv.classList.remove('hidden');
+                parsecsInput.value = '';
+            } else if (parsecsValue > 0) {
+                const result = calculateFromParsecs(parsecsValue);
+                parsecsResult.textContent = parsecsValue.toFixed(3);
+                lightyearsResult.textContent = result.distanceLightYears.toFixed(3);
+                resultsDiv.classList.remove('hidden');
+                parallaxInput.value = '';
+            } else {
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        if (calculateButton) {
+            calculateButton.addEventListener('click', handleCalculation);
+            parallaxInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleCalculation();
+            });
+            parsecsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleCalculation();
+            });
+        }
+    }
+    
+    // Call the initialization function after a slight delay to ensure the DOM is ready
+    setTimeout(initParallaxCalculator, 100);
+</script>

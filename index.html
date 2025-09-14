@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Astronomy Helper</title>
+    <style>
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        body {
+            background-image: url('https://apod.nasa.gov/apod/image/1910/M42Detailed_DrudisGoldman_8150.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        #scene {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            min-height: 100px;
+            font-size: 1.2em;
+            color: #fff;
+            text-shadow: 1px 1px 6px #000, 0 0 2px #000;
+        }
+        button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="changeScene('menu-content.html')">Menu</button>
+    <button onclick="changeScene('about.html')">About</button>
+    <button onclick="changeScene('contact.html')">Contact</button>
+    <button onclick="changeScene('help.html')">Help</button>
+    <button onclick="changeScene('MoonPhase.html')">Moon Phase</button>
+    <button onclick="changeScene('parallax.html')">Stellar Parallax</button>
+    <button onclick="changeScene('redshift.html')">Redshift</button>
+    <button onclick="changeScene('escape.html')">Escape Velocity</button>
+    <button onclick="changeScene('gforce.html')">Gravitational Force</button>
+    <button onclick="changeScene('angular.html')">Angular Size</button>
+    <button onclick="changeScene('emc.html')">E=mc^2</button>
+    <button onclick="changeScene('universalgravity.html')">Universal Gravity</button>
+
+    <div id="scene">
+        Welcome! This app is designed to make astronomy tools easier to use.
+        <p>Here we also have links to helpful websites and resources.</p>
+    </div>
+
+    <script>
+        function changeScene(filename) {
+            fetch(filename)
+                .then(response => {
+                    if (!response.ok) throw new Error('File not found');
+                    return response.text();
+                })
+                .then(html => {
+                    const sceneDiv = document.getElementById('scene');
+                    sceneDiv.innerHTML = html;
+                    // Find and execute scripts in the loaded HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const scripts = tempDiv.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        if (oldScript.src) {
+                            newScript.src = oldScript.src;
+                        } else {
+                            newScript.textContent = oldScript.textContent;
+                        }
+                        document.body.appendChild(newScript);
+                        // Optionally remove the script after execution
+                        // document.body.removeChild(newScript);
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('scene').textContent = "Scene not found.";
+                });
+        }
+    </script>
+</body>
+</html>

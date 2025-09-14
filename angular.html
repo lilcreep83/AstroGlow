@@ -1,0 +1,49 @@
+<form id="angular-form" autocomplete="off" style="margin-bottom: 1em;">
+  <label>
+    Actual Size (meters):
+    <input type="number" id="actual-size" step="any" required>
+  </label>
+  <br><br>
+  <label>
+    Distance to Object (meters):
+    <input type="number" id="distance" step="any" required>
+  </label>
+  <br><br>
+  <button type="submit">Calculate Angular Size</button>
+</form>
+<div id="angular-result" style="font-weight:bold;"></div>
+<script>
+function calculateAngularSize(actualSize, distance) {
+  if (typeof actualSize !== 'number' || typeof distance !== 'number' || isNaN(actualSize) || isNaN(distance)) {
+    throw new Error('Inputs must be numerical values.');
+  }
+  if (actualSize <= 0 || distance <= 0) {
+    throw new Error('Actual size and distance must be positive.');
+  }
+  // Angular size in radians
+  const radians = 2 * Math.atan(actualSize / (2 * distance));
+  // Convert to degrees
+  const degrees = radians * (180 / Math.PI);
+  // Convert to arcminutes and arcseconds
+  const arcminutes = degrees * 60;
+  const arcseconds = degrees * 3600;
+  return { radians, degrees, arcminutes, arcseconds };
+}
+
+document.getElementById('angular-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const actualSize = parseFloat(document.getElementById('actual-size').value);
+  const distance = parseFloat(document.getElementById('distance').value);
+  const resultDiv = document.getElementById('angular-result');
+  try {
+    const result = calculateAngularSize(actualSize, distance);
+    resultDiv.innerHTML = `Angular Size: <br>
+      ${result.radians.toExponential(4)} radians<br>
+      ${result.degrees.toFixed(4)} degrees<br>
+      ${result.arcminutes.toFixed(2)} arcminutes<br>
+      ${result.arcseconds.toFixed(2)} arcseconds`;
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  }
+});
+</script>

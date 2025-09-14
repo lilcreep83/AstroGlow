@@ -1,0 +1,33 @@
+<form id="emc-form" autocomplete="off" style="margin-bottom: 1em;">
+  <label>
+    Mass (kg):
+    <input type="number" id="mass" step="any" required>
+  </label>
+  <br><br>
+  <button type="submit">Calculate Energy</button>
+</form>
+<div id="emc-result" style="font-weight:bold;"></div>
+<script>
+function calculateEnergy(mass) {
+  const c = 299792458; // speed of light in m/s
+  if (typeof mass !== 'number' || isNaN(mass)) {
+    throw new Error('Input must be a numerical value.');
+  }
+  if (mass <= 0) {
+    throw new Error('Mass must be positive.');
+  }
+  return mass * c * c;
+}
+
+document.getElementById('emc-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const mass = parseFloat(document.getElementById('mass').value);
+  const resultDiv = document.getElementById('emc-result');
+  try {
+    const energy = calculateEnergy(mass);
+    resultDiv.textContent = `Energy (E = mc²): ${energy.toExponential(4)} joules`;
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  }
+});
+</script>

@@ -1,0 +1,39 @@
+<form id="escape-form" autocomplete="off" style="margin-bottom: 1em;">
+  <label>
+    Mass of Body (kg):
+    <input type="number" id="mass" step="any" required>
+  </label>
+  <br><br>
+  <label>
+    Radius from Center (m):
+    <input type="number" id="radius" step="any" required>
+  </label>
+  <br><br>
+  <button type="submit">Calculate Escape Velocity</button>
+</form>
+<div id="escape-result" style="font-weight:bold;"></div>
+<script>
+function calculateEscapeVelocity(mass, radius) {
+  const G = 6.67430e-11; // gravitational constant in m^3 kg^-1 s^-2
+  if (typeof mass !== 'number' || typeof radius !== 'number' || isNaN(mass) || isNaN(radius)) {
+    throw new Error('Inputs must be numerical values.');
+  }
+  if (mass <= 0 || radius <= 0) {
+    throw new Error('Mass and radius must be positive.');
+  }
+  return Math.sqrt((2 * G * mass) / radius);
+}
+
+document.getElementById('escape-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const mass = parseFloat(document.getElementById('mass').value);
+  const radius = parseFloat(document.getElementById('radius').value);
+  const resultDiv = document.getElementById('escape-result');
+  try {
+    const v = calculateEscapeVelocity(mass, radius);
+    resultDiv.textContent = `Escape Velocity: ${v.toFixed(2)} m/s`;
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  }
+});
+</script>

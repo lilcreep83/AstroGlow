@@ -1,0 +1,45 @@
+<form id="gravity-form" autocomplete="off" style="margin-bottom: 1em;">
+  <label>
+    Mass 1 (kg):
+    <input type="number" id="mass1" step="any" required>
+  </label>
+  <br><br>
+  <label>
+    Mass 2 (kg):
+    <input type="number" id="mass2" step="any" required>
+  </label>
+  <br><br>
+  <label>
+    Distance between centers (m):
+    <input type="number" id="distance" step="any" required>
+  </label>
+  <br><br>
+  <button type="submit">Calculate Gravitational Force</button>
+</form>
+<div id="gravity-result" style="font-weight:bold;"></div>
+<script>
+function calculateUniversalGravity(m1, m2, r) {
+  const G = 6.67430e-11; // gravitational constant in m^3 kg^-1 s^-2
+  if (typeof m1 !== 'number' || typeof m2 !== 'number' || typeof r !== 'number' || isNaN(m1) || isNaN(m2) || isNaN(r)) {
+    throw new Error('Inputs must be numerical values.');
+  }
+  if (m1 <= 0 || m2 <= 0 || r <= 0) {
+    throw new Error('Masses and distance must be positive.');
+  }
+  return G * m1 * m2 / (r * r);
+}
+
+document.getElementById('gravity-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const m1 = parseFloat(document.getElementById('mass1').value);
+  const m2 = parseFloat(document.getElementById('mass2').value);
+  const r = parseFloat(document.getElementById('distance').value);
+  const resultDiv = document.getElementById('gravity-result');
+  try {
+    const F = calculateUniversalGravity(m1, m2, r);
+    resultDiv.textContent = `Gravitational Force: ${F.toExponential(3)} N`;
+  } catch (err) {
+    resultDiv.textContent = err.message;
+  }
+});
+</script>
