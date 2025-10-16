@@ -1,11 +1,10 @@
 /**
- * Redshift Distance Calculator (Hubble's Law - Simplified)
+ * Redshift Distance Calculator Logic
  *
  * This module calculates the approximate distance to a galaxy based on its redshift (z)
  * using the simplified linear form of Hubble's Law: d = (c * z) / H0.
  *
  * NOTE: This linear approximation is only accurate for low redshifts (z << 1).
- * For z > 0.3, a more complex cosmological model is required.
  */
 
 // Define the speed of light in km/s (since H0 is in km/s/Mpc)
@@ -18,8 +17,7 @@ const C_SPEED_OF_LIGHT = 300000; // 3.00 x 10^5 km/s
  * @returns {number} Distance in Light Years.
  */
 function mpcToLightYears(mpc) {
-    // 3.26e6 is 3,260,000
-    return mpc * 3.26e6;
+    return mpc * 3.26e6; // 3,260,000 ly per Mpc
 }
 
 /**
@@ -27,8 +25,8 @@ function mpcToLightYears(mpc) {
  * d = (c * z) / H0
  *
  * @param {number} z - The measured redshift.
- * @param {number} H0 - The Hubble Constant in km/s/Mpc (e.g., 70).
- * @returns {object} An object containing the distance in Mpc and Light Years, or an error message.
+ * @param {number} H0 - The Hubble Constant in km/s/Mpc.
+ * @returns {object} An object containing the distance and any warnings/errors.
  */
 function calculateGalaxyDistance(z, H0) {
     // --- Input Validation ---
@@ -39,9 +37,7 @@ function calculateGalaxyDistance(z, H0) {
         return { error: "Invalid Hubble Constant (H0). Must be a positive number." };
     }
 
-    // --- Calculation ---
-    // 1. Calculate Recessional Velocity (v) using v = c * z
-    // 2. Calculate Distance (d) using d = v / H0, so d = (c * z) / H0
+    // d = (c * z) / H0
     const distanceMpc = (C_SPEED_OF_LIGHT * z) / H0;
     const distanceLy = mpcToLightYears(distanceMpc);
 
@@ -51,30 +47,89 @@ function calculateGalaxyDistance(z, H0) {
     }
 
     return {
-        redshift: z,
-        hubbleConstant: H0,
         distanceMpc: distanceMpc,
         distanceLy: distanceLy,
         warning: warning
     };
 }
 
-// --- Example Usage ---
-// Example: A galaxy with a redshift of 0.05, using H0 = 70 km/s/Mpc
-const exampleRedshift = 0.05;
-const exampleHubbleConstant = 70;
 
-const result = calculateGalaxyDistance(exampleRedshift, exampleHubbleConstant);
+// --- UI Interaction and Display Logic ---
 
-console.log("--- Redshift Distance Calculation Example ---");
-if (result.error) {
-    console.error("Error:", result.error);
-} else {
-    console.log(`Input Redshift (z): ${result.redshift}`);
-    console.log(`Input Hubble Constant (H0): ${result.hubbleConstant} km/s/Mpc`);
-    console.log(`Calculated Distance (Mpc): ${result.distanceMpc.toFixed(3)} Mpc`);
-    console.log(`Calculated Distance (Light Years): ${result.distanceLy.toFixed(0)} ly`);
-    if (result.warning) {
-        console.warn(result.warning);
+/**
+ * Reads input, calls the calculation logic, and updates the DOM.
+ * This function assumes the following element IDs exist in the HTML:
+ * - 'redshift' (input)
+ * - 'hubble-constant' (input)
+ * - 'output-box' (result container)
+ * - 'distance-mpc' (Mpc output element)
+ * - 'distance-ly' (Light Year output element)
+ * - 'message-box' (error/warning message element)
+ */
+function calculateDistance() {
+    try {
+        const redshiftInput = document.getElementById('redshift');
+        const hubbleInput = document.getElementById('hubble-constant');
+        const outputBox = document.getElementById('output-box');
+        const mpcOutput = document.getElementById('distance-mpc');
+        const lyOutput = document.getElementById('distance-ly');
+        const messageBox = document.getElementById('message-box');
+
+        // Check if all necessary elements were found
+        if (!redshiftInput || !hubbleInput || !outputBox || !mpcOutput || !lyOutput || !messageBox) {
+            console.error("Missing required HTML elements. Ensure all IDs are correct.");
+            return;
+        }
+
+        // 1. Get and parse inputs
+        const z = parseFloat(redshiftInput.value);
+        const H0 = parseFloat(hubbleInput.value);
+
+        // 2. Clear previous states and hide elements
+        outputBox.classList.add('hidden');
+        messageBox.classList.add('hidden');
+        messageBox.className = 'p-3 rounded-lg text-center text-sm hidden'; // Reset classes for dynamic styling
+
+        // 3. Call core logic
+        const result = calculateGalaxyDistance(z, H0);
+
+        // 4. Handle results/errors
+        if (result.error) {
+            messageBox.textContent = result.error;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('bg-red-900/50', 'text-red-400');
+            return;
+        }
+
+        // Display distance
+        const formattedMpc = result.distanceMpc.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        const formattedLy = result.distanceLy.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+        mpcOutput.innerHTML = `${formattedMpc} <span class="text-2xl font-normal text-teal-300">Mpc</span>`;
+        lyOutput.textContent = `(or approx. ${formattedLy} Light Years)`;
+
+        outputBox.classList.remove('hidden');
+
+        // Display warning if applicable
+        if (result.warning) {
+            messageBox.textContent = result.warning;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('bg-yellow-900/50', 'text-yellow-300');
+        }
+    } catch (error) {
+        console.error("An unexpected error occurred during UI handling:", error);
     }
 }
+
+// Attach event listeners after the document is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Attach the function to the button click
+    const calculateBtn = document.getElementById('calculate-btn');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', calculateDistance);
+        // Run once on load to populate with default values
+        calculateDistance();
+    } else {
+        console.error("Error: Button with ID 'calculate-btn' not found. Calculation will not run automatically.");
+    }
+});
