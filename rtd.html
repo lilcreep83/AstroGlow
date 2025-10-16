@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hubble Distance Calculator</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the calculator */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark background for space theme */
+            color: #e6e6e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .card {
+            background-color: #161b22;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid #30363d;
+        }
+        input[type="number"] {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            transition: border-color 0.2s;
+        }
+        input[type="number"]:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+            outline: none;
+        }
+        .btn-primary {
+            background-color: #58a6ff;
+            color: #0d1117;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-primary:hover {
+            background-color: #388bfd;
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        .result-box {
+            background-color: #0d1117;
+            border: 1px dashed #30363d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card p-6 rounded-xl space-y-6">
+        <h1 class="text-3xl font-bold text-center text-blue-400">Cosmic Distance Calculator</h1>
+        <p class="text-sm text-center text-gray-400">Calculates distance ($d$) using Hubble's Law: $d = \frac{c \cdot z}{H_0}$.</p>
+
+        <!-- Redshift (z) Input -->
+        <div class="space-y-2">
+            <label for="redshift" class="block text-sm font-medium">Redshift ($z$)</label>
+            <input type="number" id="redshift" value="0.05" step="0.001" min="0"
+                   class="w-full p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Enter the measured redshift (z)">
+        </div>
+
+        <!-- Hubble Constant (H0) Input -->
+        <div class="space-y-2">
+            <label for="hubble-constant" class="block text-sm font-medium">Hubble Constant ($H_0$) in km/s/Mpc</label>
+            <input type="number" id="hubble-constant" value="70" step="1" min="10"
+                   class="w-full p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="e.g., 70">
+            <p class="text-xs text-gray-500">Note: This is an estimated value for the expansion rate of the Universe.</p>
+        </div>
+
+        <!-- Calculate Button -->
+        <button id="calculate-btn" onclick="calculateDistance()"
+                class="w-full btn-primary p-3 rounded-lg text-lg">
+            Calculate Distance ($d$)
+        </button>
+
+        <!-- Result Display -->
+        <div id="result-container" class="result-box p-4 rounded-lg text-center mt-4 hidden">
+            <h2 class="text-xl font-semibold text-gray-300 mb-2">Calculated Distance:</h2>
+            <p id="distance-output" class="text-4xl font-extrabold text-green-400">0.00 <span class="text-2xl font-normal text-gray-400">Mpc</span></p>
+            <p id="error-message" class="text-sm text-red-400 mt-2 hidden"></p>
+        </div>
+    </div>
+
+    <script>
+        // Define the speed of light in km/s (since H0 is in km/s/Mpc)
+        const C_SPEED_OF_LIGHT = 300000; // 3.00 x 10^5 km/s
+
+        /**
+         * Converts a distance in Megaparsecs (Mpc) to Light Years (ly).
+         * 1 Megaparsec ≈ 3.26 million light-years
+         * @param {number} mpc - Distance in Megaparsecs.
+         * @returns {number} Distance in Light Years.
+         */
+        function mpcToLightYears(mpc) {
+            return mpc * 3.26e6; // 3,260,000 light-years per Mpc
+        }
+
+        /**
+         * Calculates the galaxy distance using the simplified Hubble's Law.
+         * d = (c * z) / H0
+         */
+        function calculateDistance() {
+            const redshiftInput = document.getElementById('redshift');
+            const hubbleInput = document.getElementById('hubble-constant');
+            const distanceOutput = document.getElementById('distance-output');
+            const resultContainer = document.getElementById('result-container');
+            const errorElement = document.getElementById('error-message');
+
+            // Clear previous results and errors
+            resultContainer.classList.add('hidden');
+            errorElement.classList.add('hidden');
+            distanceOutput.innerHTML = '';
+
+            const z = parseFloat(redshiftInput.value);
+            const H0 = parseFloat(hubbleInput.value);
+
+            // --- Input Validation ---
+            if (isNaN(z) || z < 0) {
+                errorElement.textContent = "Please enter a valid, non-negative redshift ($z$).";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            if (isNaN(H0) || H0 <= 0) {
+                errorElement.textContent = "Please enter a positive value for the Hubble Constant ($H_0$).";
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            if (z > 0.3) {
+                // Warning for high redshift where the formula loses accuracy
+                errorElement.textContent = "Warning: For $z > 0.3$, this simple formula may be inaccurate due to cosmological effects. A more complex model is needed.";
+                errorElement.classList.remove('hidden');
+            }
+
+            // --- Calculation ---
+            // d = (c * z) / H0
+            const distanceMpc = (C_SPEED_OF_LIGHT * z) / H0;
+
+            // Convert to light-years for additional context
+            const distanceLy = mpcToLightYears(distanceMpc);
+
+            // Format the result for display
+            const formattedMpc = distanceMpc.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            const formattedLy = distanceLy.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+            // Display the result
+            distanceOutput.innerHTML = `
+                ${formattedMpc}
+                <span class="text-2xl font-normal text-gray-400">Mpc</span>
+                <p class="text-sm text-gray-500 mt-2">
+                    (or approx. ${formattedLy} Light Years)
+                </p>
+            `;
+            resultContainer.classList.remove('hidden');
+        }
+
+        // Run the calculation on page load with default values
+        window.onload = calculateDistance;
+
+    </script>
+</body>
+</html>
+
