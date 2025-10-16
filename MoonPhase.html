@@ -9,7 +9,7 @@
         background: rgba(255,255,255,0.85);
         border-radius: 10px;
         padding: 20px;
-        max-width: 400px;
+        max-width: 450px; /* Slightly wider to fit new text */
         margin: 40px auto;
         box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     }
@@ -19,42 +19,66 @@
 <p>Enter a date to find the moon's phase:</p>
 <input type="date" id="dateInput">
 <button onclick="calculateMoonPhase()">Calculate</button>
+<p id="location-info" style="font-size: 0.9em; margin-top: 10px;"></p>
 <p id="result"></p>
 </div>
 
 <script>
     function calculateMoonPhase() {
-    // Debug element removed
         try {
             const dateInput = document.getElementById('dateInput').value;
             const resultElement = document.getElementById('result');
-
-
+            const infoElement = document.getElementById('location-info');
 
             if (!dateInput) {
                 resultElement.textContent = 'Please enter a date.';
-
+                infoElement.textContent = '';
                 return;
             }
 
             const date = new Date(dateInput);
+            
+            // --- NEW: Get Local Time Zone Offset ---
+            // getTimezoneOffset() returns difference in minutes between UTC and local time
+            const timezoneOffsetMinutes = date.getTimezoneOffset();
+            // Convert to fraction of a day (minutes / 60 minutes/hr / 24 hours/day)
+            const timezoneOffsetDays = timezoneOffsetMinutes / (60 * 24);
+            
+            // Display timezone information
+            const offsetHours = -timezoneOffsetMinutes / 60; // Invert sign for common display
+            const sign = offsetHours >= 0 ? '+' : '';
+            infoElement.textContent = `Using local time zone: UTC${sign}${offsetHours} hours`;
+
+            // Standard JDN calculation
             const year = date.getFullYear();
-            const month = date.getMonth() + 1; // Convert to 1-based month for JDN formula
+            const month = date.getMonth() + 1;
             const day = date.getDate();
-
-
 
             const a = Math.floor((14 - month) / 12);
             const y = year + 4800 - a;
-            const m = month + 12 * a - 3; // Adjusted for 1-based month
-            const jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+            const m = month + 12 * a - 3;
+            
+            // Base JDN (corresponds to noon UT on the given date)
+            let jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+
+            // --- NEW: Adjust JDN for Local Time Zone ---
+            // If the New Moon boundary event happens near midnight UT, the local time
+            // could place the event on the previous or next day. Subtracting the offset
+            // shifts the JDN reference time from local midnight back to UT midnight.
+            jdn = jdn - timezoneOffsetDays;
 
 
-
-            const knownNewMoonJdn = 2451549.5;
+            // Moon Age Calculation
+            const knownNewMoonJdn = 2451549.5; // January 6, 2000, 12:00 UT
             const synodicMonth = 29.53058867;
 
+            // The JDN is a value at Local Midnight. We adjust by 0.5 to make it midnight-to-midnight.
+            // However, the JDN formula used here *calculates* the JDN for the date's noon UT,
+            // so we don't need a +0.5 adjustment for the formula itself.
             const moonAge = (jdn - knownNewMoonJdn) % synodicMonth;
+            
+            // Ensure moonAge is positive
+            const finalMoonAge = moonAge < 0 ? moonAge + synodicMonth : moonAge;
 
 
             const phases = [
@@ -70,19 +94,20 @@
 
             let phaseName = '';
 
-            if (moonAge >= 27.5 || moonAge < 1.5) {
+            // Phase boundary logic remains the same
+            if (finalMoonAge >= 27.5 || finalMoonAge < 1.5) {
                 phaseName = phases[0];
-            } else if (moonAge < 6.5) {
+            } else if (finalMoonAge < 6.5) {
                 phaseName = phases[1];
-            } else if (moonAge < 8.5) {
+            } else if (finalMoonAge < 8.5) {
                 phaseName = phases[2];
-            } else if (moonAge < 13.5) {
+            } else if (finalMoonAge < 13.5) {
                 phaseName = phases[3];
-            } else if (moonAge < 16.5) {
+            } else if (finalMoonAge < 16.5) {
                 phaseName = phases[4];
-            } else if (moonAge < 20.5) {
+            } else if (finalMoonAge < 20.5) {
                 phaseName = phases[5];
-            } else if (moonAge < 23.5) {
+            } else if (finalMoonAge < 23.5) {
                 phaseName = phases[6];
             } else {
                 phaseName = phases[7];
@@ -94,7 +119,6 @@
             console.error('Error in calculateMoonPhase:', error);
             const resultElement = document.getElementById('result');
             resultElement.textContent = 'An error occurred. Check the console for details.';
-
         }
     }
 </script>
