@@ -1,135 +1,368 @@
-/**
- * Redshift Distance Calculator Logic
- *
- * This module calculates the approximate distance to a galaxy based on its redshift (z)
- * using the simplified linear form of Hubble's Law: d = (c * z) / H0.
- *
- * NOTE: This linear approximation is only accurate for low redshifts (z << 1).
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Magnitude Photometry</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for Inter font and dark mode aesthetics -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#4f46e5', // Indigo
+                        'secondary': '#1f2937', // Gray-800
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #4f46e5;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 font-sans flex justify-center items-start">
 
-// Define the speed of light in km/s (since H0 is in km/s/Mpc)
-const C_SPEED_OF_LIGHT = 300000; // 3.00 x 10^5 km/s
+    <div class="w-full max-w-2xl bg-gray-800 p-8 rounded-xl shadow-2xl space-y-6">
+        <h1 class="text-3xl font-bold text-center text-primary">Aperture Photometry Calculator</h1>
+        <p class="text-sm text-gray-400 text-center">
+            Upload a FITS file and define the parameters to calculate the instrumental magnitude.
+            <strong class="text-red-400">Note:</strong> Dimensions must be entered manually as JavaScript cannot parse FITS headers without external libraries.
+        </p>
 
-/**
- * Converts a distance in Megaparsecs (Mpc) to Light Years (ly).
- * 1 Megaparsec ≈ 3.26 million light-years
- * @param {number} mpc - Distance in Megaparsecs.
- * @returns {number} Distance in Light Years.
- */
-function mpcToLightYears(mpc) {
-    return mpc * 3.26e6; // 3,260,000 ly per Mpc
-}
+        <!-- Input Section -->
+        <div class="space-y-4 p-4 bg-gray-700 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold mb-3">1. FITS Data & Dimensions</h2>
+            
+            <div>
+                <label for="fitsFile" class="block text-sm font-medium text-gray-300 mb-1">Upload FITS File</label>
+                <input type="file" id="fitsFile" accept=".fits, .fit" class="w-full p-2 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-gray-600 text-sm">
+            </div>
 
-/**
- * Calculates the galaxy distance using the simplified Hubble's Law.
- * d = (c * z) / H0
- *
- * @param {number} z - The measured redshift.
- * @param {number} H0 - The Hubble Constant in km/s/Mpc.
- * @returns {object} An object containing the distance and any warnings/errors.
- */
-function calculateGalaxyDistance(z, H0) {
-    // --- Input Validation ---
-    if (typeof z !== 'number' || isNaN(z) || z < 0) {
-        return { error: "Invalid redshift (z). Must be a non-negative number." };
-    }
-    if (typeof H0 !== 'number' || isNaN(H0) || H0 <= 0) {
-        return { error: "Invalid Hubble Constant (H0). Must be a positive number." };
-    }
+            <div class="flex space-x-4">
+                <div class="flex-1">
+                    <label for="imgWidth" class="block text-sm font-medium text-gray-300 mb-1">Image Width (N_x)</label>
+                    <input type="number" id="imgWidth" value="100" min="1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary" placeholder="e.g., 1024">
+                </div>
+                <div class="flex-1">
+                    <label for="imgHeight" class="block text-sm font-medium text-gray-300 mb-1">Image Height (N_y)</label>
+                    <input type="number" id="imgHeight" value="100" min="1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary" placeholder="e.g., 1024">
+                </div>
+            </div>
+            
+            <p id="fileStatus" class="text-sm text-yellow-300 mt-2">No file loaded.</p>
+        </div>
 
-    // d = (c * z) / H0
-    const distanceMpc = (C_SPEED_OF_LIGHT * z) / H0;
-    const distanceLy = mpcToLightYears(distanceMpc);
+        <!-- Photometry Parameters -->
+        <div class="space-y-4 p-4 bg-gray-700 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold mb-3">2. Photometry Parameters (in pixels)</h2>
 
-    let warning = null;
-    if (z > 0.3) {
-        warning = "Warning: For z > 0.3, this simple linear formula is inaccurate. A full cosmological model is needed to account for the changing expansion rate of the Universe over time.";
-    }
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="apertureRadius" class="block text-sm font-medium text-gray-300 mb-1">Aperture Radius</label>
+                    <input type="number" id="apertureRadius" value="5.0" min="1" step="0.1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label for="zeroPoint" class="block text-sm font-medium text-gray-300 mb-1">Zero-Point Mag (C)</label>
+                    <input type="number" id="zeroPoint" value="25.0" step="0.1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+            </div>
+            
+            <label class="block text-sm font-medium text-gray-300 pt-2">Background Annulus Radii</label>
+            <div class="flex space-x-4">
+                <div class="flex-1">
+                    <input type="number" id="innerAnnulus" value="10.0" min="1" step="0.1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary" placeholder="Inner">
+                    <span class="text-xs text-gray-400 block mt-1">Inner Radius</span>
+                </div>
+                <div class="flex-1">
+                    <input type="number" id="outerAnnulus" value="15.0" min="1" step="0.1" class="w-full p-2 text-sm text-gray-100 bg-gray-800 border border-gray-600 rounded-lg focus:ring-primary focus:border-primary" placeholder="Outer">
+                    <span class="text-xs text-gray-400 block mt-1">Outer Radius</span>
+                </div>
+            </div>
+        </div>
 
-    return {
-        distanceMpc: distanceMpc,
-        distanceLy: distanceLy,
-        warning: warning
-    };
-}
+        <!-- Calculation Button -->
+        <button id="calculateButton" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-150 ease-in-out shadow-lg shadow-indigo-500/50 transform hover:scale-[1.01]">
+            Calculate Magnitude
+        </button>
 
+        <!-- Result Area -->
+        <div class="space-y-4 p-4 bg-gray-700 rounded-lg shadow-inner mt-6">
+            <h2 class="text-xl font-semibold text-center text-primary">3. Results</h2>
+            <div id="results" class="text-gray-200 min-h-[100px] overflow-y-auto">
+                <p class="text-center text-gray-400 pt-6">The calculation results will appear here.</p>
+            </div>
+        </div>
 
-// --- UI Interaction and Display Logic ---
+        <div id="messageBox" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-2xl max-w-sm w-full border-t-4 border-primary">
+                <p id="messageText" class="text-white text-center text-lg"></p>
+                <button onclick="document.getElementById('messageBox').classList.add('hidden')" class="mt-4 w-full bg-primary text-white py-2 rounded-lg hover:bg-indigo-600">
+                    Close
+                </button>
+            </div>
+        </div>
 
-/**
- * Reads input, calls the calculation logic, and updates the DOM.
- * This function assumes the following element IDs exist in the HTML:
- * - 'redshift' (input)
- * - 'hubble-constant' (input)
- * - 'output-box' (result container)
- * - 'distance-mpc' (Mpc output element)
- * - 'distance-ly' (Light Year output element)
- * - 'message-box' (error/warning message element)
- */
-function calculateDistance() {
-    try {
-        const redshiftInput = document.getElementById('redshift');
-        const hubbleInput = document.getElementById('hubble-constant');
-        const outputBox = document.getElementById('output-box');
-        const mpcOutput = document.getElementById('distance-mpc');
-        const lyOutput = document.getElementById('distance-ly');
-        const messageBox = document.getElementById('message-box');
+    </div>
 
-        // Check if all necessary elements were found
-        if (!redshiftInput || !hubbleInput || !outputBox || !mpcOutput || !lyOutput || !messageBox) {
-            console.error("Missing required HTML elements. Ensure all IDs are correct.");
-            return;
+    <script>
+        // Global variables
+        let imageData = null;
+        let nx = 0;
+        let ny = 0;
+        
+        const fileInput = document.getElementById('fitsFile');
+        const calculateButton = document.getElementById('calculateButton');
+        const fileStatus = document.getElementById('fileStatus');
+        const resultsDiv = document.getElementById('results');
+        const imgWidthInput = document.getElementById('imgWidth');
+        const imgHeightInput = document.getElementById('imgHeight');
+
+        /**
+         * Custom alert function using a custom message box instead of window.alert
+         */
+        function showMessage(text) {
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('messageBox').classList.remove('hidden');
+            document.getElementById('messageBox').classList.add('flex');
         }
 
-        // 1. Get and parse inputs
-        const z = parseFloat(redshiftInput.value);
-        const H0 = parseFloat(hubbleInput.value);
+        /**
+         * Loads the FITS file as an ArrayBuffer and extracts the binary data.
+         * NOTE: This is a simplification. A real FITS parser would read the
+         * header to determine BITPIX, NAXIS1, NAXIS2, etc.
+         */
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                imageData = null;
+                fileStatus.textContent = 'No file loaded.';
+                return;
+            }
 
-        // 2. Clear previous states and hide elements
-        outputBox.classList.add('hidden');
-        messageBox.classList.add('hidden');
-        messageBox.className = 'p-3 rounded-lg text-center text-sm hidden'; // Reset classes for dynamic styling
+            fileStatus.textContent = `Loading file: ${file.name}...`;
 
-        // 3. Call core logic
-        const result = calculateGalaxyDistance(z, H0);
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const buffer = e.target.result;
+                // This is a gross simplification, assuming standard FITS structure:
+                // 1. Skip the 2880 byte primary header block (HDU 0)
+                // 2. Read the rest of the file as 16-bit signed integers (BITPIX=-16 or similar)
+                
+                try {
+                    // Start reading after the first 2880 byte FITS block
+                    const dataView = new DataView(buffer);
+                    const headerLength = 2880; // Standard FITS block size for the header
+                    
+                    // We will skip the header and try to read the data that follows.
+                    // This assumes the data starts exactly after 2880 bytes and is Int16.
+                    
+                    // Total number of pixels
+                    nx = parseInt(imgWidthInput.value);
+                    ny = parseInt(imgHeightInput.value);
+                    const totalPixels = nx * ny;
 
-        // 4. Handle results/errors
-        if (result.error) {
-            messageBox.textContent = result.error;
-            messageBox.classList.remove('hidden');
-            messageBox.classList.add('bg-red-900/50', 'text-red-400');
-            return;
-        }
+                    if (isNaN(nx) || isNaN(ny) || nx <= 0 || ny <= 0) {
+                        showMessage("Please enter valid positive dimensions for the image.");
+                        imageData = null;
+                        return;
+                    }
 
-        // Display distance
-        const formattedMpc = result.distanceMpc.toLocaleString(undefined, { maximumFractionDigits: 2 });
-        const formattedLy = result.distanceLy.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                    // Check if the remaining buffer size matches expected data size (Int16 = 2 bytes/pixel)
+                    const expectedDataSize = totalPixels * 2;
+                    if (dataView.byteLength < headerLength + expectedDataSize) {
+                        showMessage(`File size mismatch. Expected ${expectedDataSize} data bytes but only found ${dataView.byteLength - headerLength} after header. Try different dimensions.`);
+                        imageData = null;
+                        return;
+                    }
 
-        mpcOutput.innerHTML = `${formattedMpc} <span class="text-2xl font-normal text-teal-300">Mpc</span>`;
-        lyOutput.textContent = `(or approx. ${formattedLy} Light Years)`;
+                    // Read pixel data (assuming Big Endian and Int16 for simplicity)
+                    const pixels = new Float64Array(totalPixels);
+                    let byteOffset = headerLength;
+                    const isBigEndian = true; // FITS standard is typically Big Endian
 
-        outputBox.classList.remove('hidden');
+                    for (let i = 0; i < totalPixels; i++) {
+                        // Assuming BITPIX=16 (signed integer)
+                        pixels[i] = dataView.getInt16(byteOffset, !isBigEndian);
+                        byteOffset += 2;
+                    }
 
-        // Display warning if applicable
-        if (result.warning) {
-            messageBox.textContent = result.warning;
-            messageBox.classList.remove('hidden');
-            messageBox.classList.add('bg-yellow-900/50', 'text-yellow-300');
-        }
-    } catch (error) {
-        console.error("An unexpected error occurred during UI handling:", error);
-    }
-}
+                    imageData = pixels;
+                    fileStatus.textContent = `File loaded. Image Size: ${nx}x${ny} pixels. Ready for calculation.`;
 
-// Attach event listeners after the document is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Attach the function to the button click
-    const calculateBtn = document.getElementById('calculate-btn');
-    if (calculateBtn) {
-        calculateBtn.addEventListener('click', calculateDistance);
-        // Run once on load to populate with default values
-        calculateDistance();
-    } else {
-        console.error("Error: Button with ID 'calculate-btn' not found. Calculation will not run automatically.");
-    }
-});
+                } catch (error) {
+                    console.error("FITS Reading Error:", error);
+                    showMessage("Error processing file data. Check console for details. Ensure file is a simple Int16 FITS.");
+                    imageData = null;
+                    fileStatus.textContent = 'Error during file processing.';
+                }
+            };
+
+            reader.onerror = (e) => {
+                showMessage("Failed to read file.");
+                imageData = null;
+                fileStatus.textContent = 'Failed to read file.';
+            };
+
+            // Read the entire file as an ArrayBuffer
+            reader.readAsArrayBuffer(file);
+        });
+
+        /**
+         * Calculates the instrumental magnitude based on aperture photometry principles.
+         */
+        calculateButton.addEventListener('click', () => {
+            if (!imageData) {
+                showMessage("Please load a FITS file first.");
+                return;
+            }
+
+            // Get parameters
+            const apRad = parseFloat(document.getElementById('apertureRadius').value);
+            const inRad = parseFloat(document.getElementById('innerAnnulus').value);
+            const outRad = parseFloat(document.getElementById('outerAnnulus').value);
+            const zeroPoint = parseFloat(document.getElementById('zeroPoint').value);
+            
+            const [w, h] = [nx, ny];
+
+            // 1. Validate parameters
+            if (apRad <= 0 || inRad <= 0 || outRad <= 0 || inRad >= outRad || apRad >= inRad) {
+                showMessage("Invalid photometry parameters. Ensure: Aperture < Inner Annulus < Outer Annulus, and all radii > 0.");
+                return;
+            }
+            if (isNaN(zeroPoint)) {
+                showMessage("Invalid Zero-Point Magnitude (C).");
+                return;
+            }
+            
+            // Assume the star is centered in the image for this demo
+            const centerX = Math.floor(w / 2);
+            const centerY = Math.floor(h / 2);
+
+            let rawStarFlux = 0;
+            let apertureArea = 0;
+            let backgroundPixels = [];
+            let annulusArea = 0;
+
+            // 2. Perform Aperture and Annulus Summation
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    // Calculate distance from center (r)
+                    const r = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+                    const index = y * w + x;
+                    const pixelValue = imageData[index];
+
+                    if (r < apRad) {
+                        // Inside aperture
+                        rawStarFlux += pixelValue;
+                        apertureArea++;
+                    } else if (r >= inRad && r < outRad) {
+                        // Inside annulus
+                        backgroundPixels.push(pixelValue);
+                        annulusArea++;
+                    }
+                }
+            }
+
+            // 3. Validation
+            if (apertureArea === 0) {
+                showMessage("Aperture covers zero pixels. Check center coordinates or radius.");
+                return;
+            }
+            if (annulusArea === 0) {
+                showMessage("Annulus covers zero pixels. Check annulus radii or image size.");
+                return;
+            }
+
+            // 4. Calculate Background (Sky)
+            // Use the median to minimize the impact of cosmic rays or small faint stars in the annulus
+            backgroundPixels.sort((a, b) => a - b);
+            let backgroundMedian = 0;
+            const mid = Math.floor(backgroundPixels.length / 2);
+            if (backgroundPixels.length % 2 === 0) {
+                backgroundMedian = (backgroundPixels[mid - 1] + backgroundPixels[mid]) / 2;
+            } else {
+                backgroundMedian = backgroundPixels[mid];
+            }
+            
+            // Total background flux estimated within the aperture area
+            const totalBackgroundFlux = backgroundMedian * apertureArea;
+
+            // 5. Calculate NET Star Flux
+            const netStarFlux = rawStarFlux - totalBackgroundFlux;
+
+            let instrumentalMagnitude;
+            let outputHtml = `
+                <h3 class="text-lg font-bold mb-2">Calculation Details</h3>
+                <p>Star Center (assumed): (${centerX}, ${centerY})</p>
+                <p>Aperture Area: ${apertureArea} pixels</p>
+                <p>Raw Star Flux (Aperture Sum): ${rawStarFlux.toFixed(2).toLocaleString()} ADU</p>
+                <p>Background Median (Annulus): ${backgroundMedian.toFixed(2).toLocaleString()} ADU/pixel</p>
+                <p>Total Background Flux in Aperture: ${totalBackgroundFlux.toFixed(2).toLocaleString()} ADU</p>
+                <hr class="my-3 border-gray-600">
+            `;
+
+
+            if (netStarFlux <= 0) {
+                instrumentalMagnitude = 99.99;
+                outputHtml += `
+                    <p class="text-red-400 font-bold">NET Star Flux (F_net): ${netStarFlux.toFixed(2).toLocaleString()} ADU</p>
+                    <p class="text-red-400 font-bold">Warning: Net flux is zero or negative. Star is likely too faint or parameters are incorrect.</p>
+                `;
+            } else {
+                // 6. Apply the Magnitude Formula: $m = -2.5 \times \log_{10}(F_{net}) + C$
+                instrumentalMagnitude = -2.5 * Math.log10(netStarFlux) + zeroPoint;
+
+                outputHtml += `
+                    <p class="text-green-400 font-bold">NET Star Flux (F_net): ${netStarFlux.toFixed(2).toLocaleString()} ADU</p>
+                `;
+            }
+            
+            // 7. Final Output
+            outputHtml += `
+                <p>Zero-Point Magnitude (C): ${zeroPoint.toFixed(2)}</p>
+                <h2 class="text-2xl font-extrabold text-yellow-300 mt-4">
+                    INSTRUMENTAL MAGNITUDE: ${instrumentalMagnitude.toFixed(4)}
+                </h2>
+            `;
+
+            resultsDiv.innerHTML = outputHtml;
+        });
+        
+        // Add Math.log10 polyfill for older browsers (not strictly needed for modern ones)
+        Math.log10 = Math.log10 || function(x) {
+            return Math.log(x) / Math.LN10;
+        };
+
+        // Trigger file input change on dimension change to re-validate file size
+        imgWidthInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+        imgHeightInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+    </script>
+</body>
+</html>
+
