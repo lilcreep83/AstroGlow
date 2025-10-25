@@ -47,13 +47,17 @@
         </p>
 
         <div id="status-card" class="p-4 rounded-lg bg-secondary text-center space-y-2">
+            <!-- Loader State -->
             <div id="loader" class="flex justify-center items-center space-x-2">
                 <div class="loading-dot w-3 h-3 bg-accent rounded-full"></div>
                 <div class="loading-dot w-3 h-3 bg-accent rounded-full"></div>
                 <div class="loading-dot w-3 h-3 bg-accent rounded-full"></div>
                 <span class="text-lg">Locating User...</span>
             </div>
-            <p id="error-message" class="text-red-400 font-semibold hidden">Error: Could not retrieve location.</p>
+            <!-- Error State - This content will be overwritten by handleError() -->
+            <div id="error-message" class="hidden text-left text-red-300">
+                <!-- Detailed error message injected here -->
+            </div>
         </div>
 
         <div id="results-card" class="hidden space-y-4">
@@ -155,7 +159,7 @@
             // Assume peak stargazing hours are 9 PM (21) to 4 AM (4)
             if (hour >= 21 || hour <= 4) {
                 baseScore = 4; // Good starting score for night
-            } else if (hour >= 18 || hour <= 20 || hour >= 5 && hour <= 8) {
+            } else if (hour >= 18 && hour < 21 || hour >= 5 && hour < 8) {
                 baseScore = 2; // Twilight/Dawn
             } else {
                 baseScore = 1; // Daytime
@@ -183,7 +187,7 @@
             loader.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             resultsCard.classList.add('hidden');
-            document.getElementById('status-card').classList.remove('bg-red-900', 'bg-green-900');
+            document.getElementById('status-card').classList.remove('hidden', 'bg-red-900');
             document.getElementById('status-card').classList.add('bg-secondary');
         }
 
@@ -205,8 +209,8 @@
 
             // Update UI state
             loader.classList.add('hidden');
+            document.getElementById('status-card').classList.add('hidden'); // Hide the status card on success
             resultsCard.classList.remove('hidden');
-            document.getElementById('status-card').classList.add('hidden');
         }
 
         /**
@@ -215,26 +219,38 @@
          */
         function handleError(error) {
             loader.classList.add('hidden');
-            errorMessage.classList.remove('hidden');
-            document.getElementById('status-card').classList.remove('bg-secondary');
-            document.getElementById('status-card').classList.add('bg-red-900');
+            resultsCard.classList.add('hidden');
+            
+            // Show the status card and style it red
+            document.getElementById('status-card').classList.remove('hidden', 'bg-secondary');
+            document.getElementById('status-card').classList.add('bg-red-900', 'p-4');
 
-            let errorMsg = '';
+            let titleMsg = '';
+            let detailsMsg = '';
+
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    errorMsg = "Please enable location access in your browser settings.";
+                    titleMsg = "Location Access Denied 🚫 (Code 1)";
+                    detailsMsg = "You blocked the request. Please check your browser's settings (the padlock icon in the address bar) and **Allow** location access for this site, then use the 'Recheck' button.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    errorMsg = "Location information is unavailable.";
+                    titleMsg = "Position Unavailable 🛰️ (Code 2)";
+                    detailsMsg = "Your device cannot determine its location (e.g., poor GPS signal, no Wi-Fi location service). Ensure your device's location services are enabled.";
                     break;
                 case error.TIMEOUT:
-                    errorMsg = "The request to get user location timed out.";
+                    titleMsg = "Location Timeout ⏳ (Code 3)";
+                    detailsMsg = "The request to get your location took too long. This often happens with slow connections or weak GPS signal. Try moving to a spot with better reception.";
                     break;
                 default:
-                    errorMsg = "An unknown error occurred.";
+                    titleMsg = "Unknown Geolocation Error ❌";
+                    detailsMsg = `An unknown error occurred: ${error.message || 'No message provided'}.`;
             }
-            errorMessage.textContent = `Error: ${errorMsg}`;
-            console.error("Geolocation Error:", error.message);
+
+            // Update error message display
+            errorMessage.innerHTML = `<p class="text-xl font-bold">${titleMsg}</p><p class="text-sm mt-1">${detailsMsg}</p>`;
+            errorMessage.classList.remove('hidden');
+
+            console.error("Geolocation Error:", error);
         }
 
         /**
